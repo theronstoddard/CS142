@@ -1,5 +1,3 @@
-// Hybrid Car.cpp : Defines the entry point for the console application.
-//
 
 #include <iostream>
 #include <string>
@@ -7,12 +5,18 @@
 
 using namespace std;
 
+#pragma region Declarations
+
 const int QUIT_OPTION = 0;
 const int SINGLE_CHIP_OPTION = 1;
-const int MULTIPLE_CHIP_OPTION = 2;
+const int MULTIPLE_CHIP_IN_SINGLE_SLOT_OPTION = 2;
+const int MULTIPLE_CHIP_IN_EACH_SLOT_OPTION = 3;
+
 const int ROW_COUNT = 12;
 const int MIN_SLOT = 0;
 const int MAX_SLOT = 8;
+
+const int MIN_CHIPS = 0;
 
 static int Money[MAX_SLOT+1] = { 100, 500, 1000, 0, 10000, 0, 1000, 500, 100 };
 
@@ -20,8 +24,14 @@ static int Money[MAX_SLOT+1] = { 100, 500, 1000, 0, 10000, 0, 1000, 500, 100 };
 int Menu();
 void SingleChipDropPrompt();
 int SingleChipDrop(double slotNumber, bool print);
+int GetNumberOfChips();
+int GetSlotNumber();
 void MultipleChipDropPrompt();
+void MultipleChipInEachSlotPrompt();
 void MultipleChipDrop(int chips, double slotNumber, double& winnings);
+double ComputeWinnings(int slot);
+
+#pragma endregion 
 
 int main()
 {
@@ -39,14 +49,60 @@ int main()
 		{
 			SingleChipDropPrompt();
 		}
-		else if (option == MULTIPLE_CHIP_OPTION)
+		else if (option == MULTIPLE_CHIP_IN_SINGLE_SLOT_OPTION)
 		{
 			MultipleChipDropPrompt();
 		}
-		
+		else if (option == MULTIPLE_CHIP_IN_EACH_SLOT_OPTION)
+		{
+			MultipleChipInEachSlotPrompt();
+		}		
 	} while (option > 0);
 
 	return 0;
+}
+
+#pragma region Main user interaction
+
+int Menu()
+{
+	int option = 0;
+	bool invalidChoice = false;
+
+	cout << endl << "MENU: Please select one of the following options:" << endl;
+	cout << "0 - Quit the program" << endl;
+	cout << "1 - Drop a single chip into one slot" << endl;
+	cout << "2 - Drop multiple chips into one slot" << endl;
+	cout << "3 - Drop multiple chips into each slot" << endl;
+
+	do
+	{
+		cout << "Enter your selection now: ";
+		cin >> option;
+		invalidChoice = cin.fail() || option < QUIT_OPTION || option > MULTIPLE_CHIP_IN_EACH_SLOT_OPTION;
+
+		if (invalidChoice)
+		{
+			cout << "INVALID SELECTION.  Please enter 0, 1, 2 or 3" << endl;
+			cin.clear();
+			cin.ignore(INT_MAX, '\n');
+		}
+	} while (invalidChoice);
+
+	return option;
+}
+
+void SingleChipDropPrompt()
+{
+	int slot = 0;
+	double winnings = 0;
+
+	cout << "*** DROP SINGLE CHIP ***" << endl;
+
+	slot = GetSlotNumber();
+
+	winnings = SingleChipDrop(slot, true);
+	cout << "WINNINGS: $" << winnings << endl;
 }
 
 void MultipleChipDropPrompt()
@@ -56,23 +112,9 @@ void MultipleChipDropPrompt()
 	double winnings = 0.0;
 
 	cout << "*** DROP MULTIPLE CHIPS ***" << endl;
-	cout << "How many chips do you want to drop (>0)? ";
-	cin >> chips;
 
-	if (chips <= 0)
-	{
-		cout << "INVALID NUMBER OF CHIPS." << endl;
-		return;
-	}
-
-	cout << "Which slot do you want to drop the chip in (0-8)? ";
-	cin >> slot;
-
-	if (slot < MIN_SLOT || slot > MAX_SLOT)
-	{
-		cout << "INVALID SLOT." << endl;
-		return;
-	}
+	chips = GetNumberOfChips();
+	slot = GetSlotNumber();
 
 	MultipleChipDrop(chips, slot, winnings);
 	
@@ -81,31 +123,82 @@ void MultipleChipDropPrompt()
 	cout << fixed << setprecision(1);
 }
 
+void MultipleChipInEachSlotPrompt()
+{
+	int chips = 0;
+	double winnings = 0.0;
+
+	cout << "*** SEQUENTIALLY DROP MULTIPLE CHIPS ***" << endl;
+	chips = GetNumberOfChips();
+
+	for (int slot = MIN_SLOT; slot <= MAX_SLOT; slot++)
+	{
+		winnings = 0.0;
+		MultipleChipDrop(chips, slot, winnings);
+		
+		cout << setprecision(2) << endl << "Total Winnings on slot " << slot << " chips: $" << winnings << endl;
+		cout << setprecision(2) << "Average winnings per chip: $" << winnings / chips << endl;
+	}
+	cout << fixed << setprecision(1);
+}
+
+#pragma endregion
+
+#pragma region Input validation
+
+int GetNumberOfChips()
+{
+	int chips = 0;
+	bool invalidChoice = true;
+
+	do
+	{
+		cout << "How many chips do you want to drop (>0)? ";
+		cin >> chips;
+		invalidChoice = cin.fail() || chips < MIN_CHIPS;
+		if (invalidChoice)
+		{
+			cout << "INVALID NUMBER OF CHIPS." << endl;
+			cin.clear();
+			cin.ignore(INT_MAX, '\n');
+		}
+	} while (invalidChoice);
+
+	return chips;
+}
+
+int GetSlotNumber()
+{
+	int slot = 0;
+	bool invalidChoice = true;
+
+	do
+	{
+		cout << "Which slot do you want to drop the chip in (0-8)? ";
+		cin >> slot;
+		invalidChoice = cin.fail() || slot < MIN_SLOT || slot > MAX_SLOT;
+
+		if (invalidChoice)
+		{
+			cout << "INVALID SLOT, please try again." << endl;
+			cin.clear();
+			cin.ignore(INT_MAX, '\n');
+		}
+	} while (invalidChoice);
+
+	return slot;
+}
+
+#pragma endregion 
+
+#pragma region Chip Drop Calculations
+
 void MultipleChipDrop(int chips, double slotNumber, double& winnings)
 {
 	for (int i = 0; i < chips; i++)
 	{
 		winnings += SingleChipDrop(slotNumber, false);
 	}
-}
-
-void SingleChipDropPrompt()
-{
-	int slot = 0;
-	double winnings = 0;
-
-	cout << "*** DROP SINGLE CHIP ***" << endl;
-	cout << "Which slot do you want to drop the chip in (0-8)? ";
-	cin >> slot;
-
-	if (slot < MIN_SLOT || slot > MAX_SLOT)
-	{
-		cout << "INVALID SLOT." << endl;
-		return;
-	}
-
-	winnings = SingleChipDrop(slot, true);
-	cout << "WINNINGS: $" << winnings << endl;
 }
 
 int SingleChipDrop(double slotNumber, bool print)
@@ -150,39 +243,17 @@ int SingleChipDrop(double slotNumber, bool print)
 		cout << "]" << endl;
 	}
 
-	return Money[static_cast<int>(slotNumber)];
+	return ComputeWinnings(slotNumber);
 }
 
-double CalculatePrizeMoney()
+double ComputeWinnings(int slot)
 {
-	throw new exception("Not implemented");
+	return Money[static_cast<int>(slot)];
 }
 
-int Menu()
-{
-	cout << endl << "MENU: Please select one of the following options:" << endl;
-	cout << "0 - Quit the program" << endl;
-	cout << "1 - Drop a single chip into one slot" << endl;
-	cout << "2 - Drop multiple chips into one slot" << endl;
+#pragma endregion 
 
-	int option = 0;
-	bool invalidChoice = false;
-	do
-	{
-		cout << "Enter your selection now: ";
-		cin >> option;
-		invalidChoice = cin.fail() || option < QUIT_OPTION || option > MULTIPLE_CHIP_OPTION;
-
-		if (invalidChoice)
-		{
-			cout << "INVALID SELECTION.  Please enter 0, 1 or 2" << endl;
-			cin.clear();
-			cin.ignore(INT_MAX, '\n');
-		}
-	} while (invalidChoice);
-
-	return option;
-}
+#pragma region Tests
 
 double _averageValues[MAX_SLOT+1][2] = {
 	{ 500, 1000},
@@ -217,7 +288,7 @@ int Xmain()
 	int chips = 10000;
 	for (int x = 0; x < 10; x++)
 	{
-		for (int i = 0; i < 8; i++)
+		for (int i = 0; i <= 8; i++)
 		{
 			winnings = 0.0;
 			MultipleChipDrop(chips, i, winnings);
@@ -233,3 +304,4 @@ int Xmain()
 	return 0;
 }
 
+#pragma endregion 
